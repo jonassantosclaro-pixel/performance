@@ -1,0 +1,6 @@
+{
+  "name": "Performance Treinamentos",
+  "description": "Site corporativo da Performance - Treinamentos Corporativos, SIPAT e Saúde Mental no Trabalho.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,99 @@
+{
+  "entities": {
+    "GlobalSettings": {
+      "title": "Global Settings",
+      "description": "Global website settings and contact links.",
+      "type": "object",
+      "properties": {
+        "instagram": {
+          "type": "string",
+          "description": "Instagram profile URL"
+        },
+        "whatsapp": {
+          "type": "string",
+          "description": "WhatsApp contact number with country code"
+        },
+        "email": {
+          "type": "string",
+          "description": "Contact email address"
+        },
+        "views": {
+          "type": "number",
+          "description": "Total page view counter"
+        }
+      },
+      "required": ["instagram", "whatsapp", "email", "views"]
+    },
+    "ContactMessage": {
+      "title": "Contact Message",
+      "description": "User submitted contact or quote request.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "company": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["name", "email", "message", "createdAt"]
+    },
+    "BlogPost": {
+      "title": "Blog Post",
+      "description": "A news post or article written by performance administrators.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "imageUrl": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "author": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["title", "content", "summary", "imageUrl", "category", "author", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/settings/global": {
+      "schema": "GlobalSettings",
+      "description": "Single document holding the global app configurations and view counter."
+    },
+    "/leads/{leadId}": {
+      "schema": "ContactMessage",
+      "description": "Submitted contact messages or quote requests."
+    },
+    "/posts/{postId}": {
+      "schema": "BlogPost",
+      "description": "Blog posts and news articles created by Performance administration."
+    }
+  }
+}
