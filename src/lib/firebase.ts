@@ -21,6 +21,9 @@ import {
   onAuthStateChanged,
   User
 } from "firebase/auth";
+import { Solution, Program, Testimonial, Review } from "../types";
+import { SOLUTIONS, PROGRAMS, TESTIMONIALS, REVIEWS_DATA } from "../data";
+
 
 export enum OperationType {
   CREATE = 'create',
@@ -85,13 +88,27 @@ export interface GlobalSettings {
   whatsapp: string;
   email: string;
   views: number;
+  heroTitle?: string;
+  heroSubtitle?: string;
+  heroCta?: string;
+  statsColaboradores?: number;
+  statsEventos?: number;
+  statsEmpresas?: number;
+  statsAprovacao?: number;
 }
 
 const DEFAULT_SETTINGS: GlobalSettings = {
   instagram: "https://instagram.com/performance.treinamentos",
   whatsapp: "+5511999999999",
   email: "contato@performance.com",
-  views: 0
+  views: 0,
+  heroTitle: "Experiências que Transformam Equipes e Empresas.",
+  heroSubtitle: "Palestras shows, teatro corporativo, ginástica laboral, ergonomia e atividades interativas. Soluções inovadoras para promover a segurança do trabalho, saúde física e bem-estar mental de seus colaboradores.",
+  heroCta: "Ver Programas",
+  statsColaboradores: 450000,
+  statsEventos: 2500,
+  statsEmpresas: 850,
+  statsAprovacao: 98
 };
 
 /**
@@ -110,9 +127,31 @@ export async function bootstrapAndTrackViews(onSettingsChange: (settings: Global
       onSettingsChange(initialSettings);
     } else {
       // Document exists, increment views by 1
-      await updateDoc(globalDocRef, {
+      const currentData = docSnap.data() as GlobalSettings;
+      // Ensure any missing settings fields are patched from defaults
+      const updatedData: any = {
         views: increment(1)
-      });
+      };
+      
+      // Patch missing fields lazily
+      let hasMissing = false;
+      const keysToCheck = [
+        "heroTitle", "heroSubtitle", "heroCta", 
+        "statsColaboradores", "statsEventos", "statsEmpresas", "statsAprovacao"
+      ] as const;
+      
+      for (const key of keysToCheck) {
+        if (currentData[key] === undefined) {
+          updatedData[key] = DEFAULT_SETTINGS[key];
+          hasMissing = true;
+        }
+      }
+      
+      if (hasMissing) {
+        await updateDoc(globalDocRef, updatedData);
+      } else {
+        await updateDoc(globalDocRef, { views: increment(1) as any });
+      }
     }
   } catch (error) {
     console.error("Error bootstrapping or tracking views:", error);
@@ -188,6 +227,258 @@ export async function saveGlobalSettings(settings: Partial<GlobalSettings>) {
   await updateDoc(globalDocRef, settings);
 }
 
+// SOLUTIONS REAL-TIME & CRUD
+export function listenToSolutions(onSolutionsChange: (solutions: Solution[]) => void) {
+  const colRef = collection(db, "solutions");
+  
+  return onSnapshot(
+    colRef,
+    async (snapshot) => {
+      if (snapshot.empty) {
+        console.log("Seeding solutions collection with defaults...");
+        for (const sol of SOLUTIONS) {
+          const docRef = doc(db, "solutions", sol.id);
+          await setDoc(docRef, {
+            title: sol.title,
+            icon: sol.icon,
+            shortDesc: sol.shortDesc,
+            longDesc: sol.longDesc,
+            category: sol.category,
+            benefits: sol.benefits
+          }).catch(err => console.error("Error seeding solution:", err));
+        }
+        return;
+      }
+      
+      const solutions: Solution[] = [];
+      snapshot.forEach((doc) => {
+        solutions.push({ id: doc.id, ...doc.data() } as Solution);
+      });
+      onSolutionsChange(solutions);
+    },
+    (error) => {
+      handleFirestoreError(error, OperationType.LIST, "solutions");
+    }
+  );
+}
+
+export async function saveSolution(solution: Omit<Solution, "id"> & { id?: string }) {
+  const id = solution.id || "sol_" + Math.random().toString(36).substring(2, 15);
+  const docRef = doc(db, "solutions", id);
+  const payload = {
+    title: solution.title,
+    icon: solution.icon,
+    shortDesc: solution.shortDesc,
+    longDesc: solution.longDesc,
+    category: solution.category,
+    benefits: solution.benefits
+  };
+  try {
+    await setDoc(docRef, payload);
+    return { id, ...payload };
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `solutions/${id}`);
+  }
+}
+
+export async function deleteSolution(solutionId: string) {
+  const docRef = doc(db, "solutions", solutionId);
+  try {
+    await deleteDoc(docRef);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `solutions/${solutionId}`);
+  }
+}
+
+// PROGRAMS REAL-TIME & CRUD
+export function listenToPrograms(onProgramsChange: (programs: Program[]) => void) {
+  const colRef = collection(db, "programs");
+  
+  return onSnapshot(
+    colRef,
+    async (snapshot) => {
+      if (snapshot.empty) {
+        console.log("Seeding programs collection with defaults...");
+        for (const prog of PROGRAMS) {
+          const docRef = doc(db, "programs", prog.id);
+          await setDoc(docRef, {
+            title: prog.title,
+            description: prog.description,
+            target: prog.target,
+            period: prog.period,
+            color: prog.color,
+            tagline: prog.tagline
+          }).catch(err => console.error("Error seeding program:", err));
+        }
+        return;
+      }
+      
+      const programs: Program[] = [];
+      snapshot.forEach((doc) => {
+        programs.push({ id: doc.id, ...doc.data() } as Program);
+      });
+      onProgramsChange(programs);
+    },
+    (error) => {
+      handleFirestoreError(error, OperationType.LIST, "programs");
+    }
+  );
+}
+
+export async function saveProgram(program: Omit<Program, "id"> & { id?: string }) {
+  const id = program.id || "prog_" + Math.random().toString(36).substring(2, 15);
+  const docRef = doc(db, "programs", id);
+  const payload = {
+    title: program.title,
+    description: program.description,
+    target: program.target,
+    period: program.period,
+    color: program.color,
+    tagline: program.tagline
+  };
+  try {
+    await setDoc(docRef, payload);
+    return { id, ...payload };
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `programs/${id}`);
+  }
+}
+
+export async function deleteProgram(programId: string) {
+  const docRef = doc(db, "programs", programId);
+  try {
+    await deleteDoc(docRef);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `programs/${programId}`);
+  }
+}
+
+// TESTIMONIALS REAL-TIME & CRUD
+export function listenToTestimonials(onTestimonialsChange: (testimonials: Testimonial[]) => void) {
+  const colRef = collection(db, "testimonials");
+  
+  return onSnapshot(
+    colRef,
+    async (snapshot) => {
+      if (snapshot.empty) {
+        console.log("Seeding testimonials collection with defaults...");
+        for (const test of TESTIMONIALS) {
+          const docRef = doc(db, "testimonials", test.id);
+          await setDoc(docRef, {
+            name: test.name,
+            role: test.role,
+            company: test.company,
+            text: test.text,
+            rating: test.rating
+          }).catch(err => console.error("Error seeding testimonial:", err));
+        }
+        return;
+      }
+      
+      const testimonials: Testimonial[] = [];
+      snapshot.forEach((doc) => {
+        testimonials.push({ id: doc.id, ...doc.data() } as Testimonial);
+      });
+      onTestimonialsChange(testimonials);
+    },
+    (error) => {
+      handleFirestoreError(error, OperationType.LIST, "testimonials");
+    }
+  );
+}
+
+export async function saveTestimonial(testimonial: Omit<Testimonial, "id"> & { id?: string }) {
+  const id = testimonial.id || "test_" + Math.random().toString(36).substring(2, 15);
+  const docRef = doc(db, "testimonials", id);
+  const payload = {
+    name: testimonial.name,
+    role: testimonial.role,
+    company: testimonial.company,
+    text: testimonial.text,
+    rating: Number(testimonial.rating)
+  };
+  try {
+    await setDoc(docRef, payload);
+    return { id, ...payload };
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `testimonials/${id}`);
+  }
+}
+
+export async function deleteTestimonial(testimonialId: string) {
+  const docRef = doc(db, "testimonials", testimonialId);
+  try {
+    await deleteDoc(docRef);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `testimonials/${testimonialId}`);
+  }
+}
+
+// GOOGLE REVIEWS REAL-TIME & CRUD (MAPPED TO REVIEWS COLLECTION)
+export function listenToReviews(onReviewsChange: (reviews: Review[]) => void) {
+  const colRef = collection(db, "reviews");
+  
+  return onSnapshot(
+    colRef,
+    async (snapshot) => {
+      if (snapshot.empty) {
+        console.log("Seeding reviews collection with defaults...");
+        for (const rev of REVIEWS_DATA) {
+          const docRef = doc(db, "reviews", rev.id);
+          await setDoc(docRef, {
+            name: rev.name,
+            role: rev.role,
+            company: rev.company,
+            rating: rev.rating,
+            text: rev.text,
+            date: rev.date,
+            avatarBg: rev.avatarBg
+          }).catch(err => console.error("Error seeding review:", err));
+        }
+        return;
+      }
+      
+      const reviews: Review[] = [];
+      snapshot.forEach((doc) => {
+        reviews.push({ id: doc.id, ...doc.data() } as Review);
+      });
+      onReviewsChange(reviews);
+    },
+    (error) => {
+      handleFirestoreError(error, OperationType.LIST, "reviews");
+    }
+  );
+}
+
+export async function saveReview(review: Omit<Review, "id"> & { id?: string }) {
+  const id = review.id || "rev_" + Math.random().toString(36).substring(2, 15);
+  const docRef = doc(db, "reviews", id);
+  const payload = {
+    name: review.name,
+    role: review.role,
+    company: review.company,
+    rating: Number(review.rating),
+    text: review.text,
+    date: review.date || "Há 1 dia",
+    avatarBg: review.avatarBg || "bg-sky-600"
+  };
+  try {
+    await setDoc(docRef, payload);
+    return { id, ...payload };
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `reviews/${id}`);
+  }
+}
+
+export async function deleteReview(reviewId: string) {
+  const docRef = doc(db, "reviews", reviewId);
+  try {
+    await deleteDoc(docRef);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `reviews/${reviewId}`);
+  }
+}
+
 // BLOG INTERFACES AND CRUD
 export interface BlogPost {
   id?: string;
@@ -258,3 +549,4 @@ export function listenToBlogPosts(onPostsChange: (posts: BlogPost[]) => void) {
     }
   );
 }
+

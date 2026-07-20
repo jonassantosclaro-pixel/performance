@@ -1,10 +1,16 @@
 import React, { useState, useRef } from "react";
 import { ArrowDown, Play, Sparkles, MessageSquareCode } from "lucide-react";
 import { motion } from "motion/react";
+import { GlobalSettings } from "../lib/firebase";
 
-export default function Hero() {
+interface HeroProps {
+  settings?: GlobalSettings;
+}
+
+export default function Hero({ settings }: HeroProps) {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!containerRef.current) return;
@@ -131,9 +137,7 @@ export default function Hero() {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 dark:text-white leading-[1.1] tracking-tight"
           >
-            Experiências que{" "}
-            <span className="text-sky-600">Transformam</span>{" "}
-            Equipes e Empresas.
+            {settings?.heroTitle || "Experiências que Transformam Equipes e Empresas."}
           </motion.h1>
 
           {/* Subtitle */}
@@ -143,9 +147,7 @@ export default function Hero() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-lg text-slate-600 dark:text-slate-300 font-normal max-w-xl leading-relaxed"
           >
-            Palestras shows, teatro corporativo, ginástica laboral, ergonomia e
-            atividades interativas. Soluções inovadoras para promover a segurança do trabalho,
-            saúde física e bem-estar mental de seus colaboradores.
+            {settings?.heroSubtitle || "Palestras shows, teatro corporativo, ginástica laboral, ergonomia e atividades interativas. Soluções inovadoras para promover a segurança do trabalho, saúde física e bem-estar mental de seus colaboradores."}
           </motion.p>
 
           {/* Action buttons */}
@@ -159,7 +161,7 @@ export default function Hero() {
               onClick={() => handleScrollTo("#programas")}
               className="px-8 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-sky-600 dark:hover:bg-sky-500 text-white font-bold text-base shadow-xl hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer"
             >
-              Ver Programas
+              {settings?.heroCta || "Ver Programas"}
             </button>
             <button
               onClick={() => handleScrollTo("#contato")}

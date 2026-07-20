@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Users, Award, Landmark, Smile } from "lucide-react";
 import { motion } from "motion/react";
+import { GlobalSettings } from "../lib/firebase";
 
 interface StatItemProps {
   key?: React.Key;
@@ -11,6 +12,7 @@ interface StatItemProps {
   icon: React.ReactNode;
   colorClass: string;
 }
+
 
 function StatCounter({ end, suffix, label, description, icon, colorClass }: StatItemProps) {
   const [count, setCount] = useState(0);
@@ -63,10 +65,14 @@ function StatCounter({ end, suffix, label, description, icon, colorClass }: Stat
   );
 }
 
-export default function Stats() {
+interface StatsProps {
+  settings?: GlobalSettings;
+}
+
+export default function Stats({ settings }: StatsProps) {
   const statsList = [
     {
-      end: 450000,
+      end: settings?.statsColaboradores ?? 450000,
       suffix: "+",
       label: "Colaboradores",
       description: "Treinados e motivados no país",
@@ -74,7 +80,7 @@ export default function Stats() {
       colorClass: "bg-sky-500 text-sky-600"
     },
     {
-      end: 2500,
+      end: settings?.statsEventos ?? 2500,
       suffix: "+",
       label: "Eventos Realizados",
       description: "SIPATs, palestras e dinâmicas",
@@ -82,7 +88,7 @@ export default function Stats() {
       colorClass: "bg-emerald-500 text-emerald-600"
     },
     {
-      end: 850,
+      end: settings?.statsEmpresas ?? 850,
       suffix: "+",
       label: "Empresas Atendidas",
       description: "Multinacionais, hospitais e indústrias",
@@ -90,7 +96,7 @@ export default function Stats() {
       colorClass: "bg-amber-500 text-amber-500"
     },
     {
-      end: 98,
+      end: settings?.statsAprovacao ?? 98,
       suffix: "%",
       label: "Aprovação",
       description: "Pesquisa de satisfação pós-evento",

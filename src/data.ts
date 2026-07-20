@@ -1,4 +1,4 @@
-import { Solution, Program, Testimonial, GalleryItem } from "./types";
+import { Solution, Program, Testimonial, GalleryItem, Review } from "./types";
 
 export const SOLUTIONS: Solution[] = [
   {
@@ -227,3 +227,47 @@ export const GALLERY_ITEMS: GalleryItem[] = [
     category: "Gamificação"
   }
 ];
+
+export const REVIEWS_DATA: Review[] = [
+  {
+    id: "1",
+    name: "Mariana Menezes",
+    role: "Coordenadora de EHS (Segurança do Trabalho)",
+    company: "Nestlé Brasil",
+    rating: 5,
+    text: "O teatro corporativo de SIPAT da Performance foi o melhor que já contratamos! Leve, engraçado e com uma mensagem de prevenção de acidentes impecável. Nossos colaboradores amaram e engajaram 100%.",
+    date: "Há 1 semana",
+    avatarBg: "bg-sky-600"
+  },
+  {
+    id: "2",
+    name: "Rodrigo Silva",
+    role: "Gerente de Recursos Humanos",
+    company: "Ambev",
+    rating: 5,
+    text: "Contratamos o programa integrado de Quick Massage e Ergonomia para o escritório central. A equipe da Performance é super profissional, pontual e as sessões trouxeram um alívio de estresse visível para a equipe.",
+    date: "Há 2 semanas",
+    avatarBg: "bg-emerald-600"
+  },
+  {
+    id: "3",
+    name: "Ana Paula Costa",
+    role: "Diretora de QVT (Qualidade de Vida)",
+    company: "Itaú Unibanco",
+    rating: 5,
+    text: "As palestras show focadas em Saúde Mental e Equilíbrio Emocional foram um divisor de águas na nossa semana da saúde. Abordagem com empatia, leveza e embasamento científico fantástico.",
+    date: "Há 1 mês",
+    avatarBg: "bg-purple-600"
+  },
+  {
+    id: "4",
+    name: "Juliana Vasconcelos",
+    role: "Gestora de DHO",
+    company: "Johnson & Johnson",
+    rating: 5,
+    text: "Excelente atendimento comercial e execução técnica espetacular. Adaptaram as dinâmicas teatrais para a realidade do nosso chão de fábrica de forma genial. Superou nossas expectativas!",
+    date: "Há 1 mês",
+    avatarBg: "bg-amber-600"
+  }
+];
+

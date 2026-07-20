@@ -1,20 +1,34 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { TESTIMONIALS } from "../data";
 import { Quote, ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { listenToTestimonials } from "../lib/firebase";
+import { Testimonial } from "../types";
 
 export default function Testimonials() {
+  const [testimonials, setTestimonials] = useState<Testimonial[]>(TESTIMONIALS);
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  useEffect(() => {
+    const unsubscribe = listenToTestimonials((updatedTestimonials) => {
+      if (updatedTestimonials && updatedTestimonials.length > 0) {
+        setTestimonials(updatedTestimonials);
+        // Ensure currentIndex is still valid
+        setCurrentIndex((prev) => (prev >= updatedTestimonials.length ? 0 : prev));
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   const handleNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % TESTIMONIALS.length);
+    setCurrentIndex((prev) => (prev + 1) % testimonials.length);
   };
 
   const handlePrev = () => {
-    setCurrentIndex((prev) => (prev - 1 + TESTIMONIALS.length) % TESTIMONIALS.length);
+    setCurrentIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
   };
 
-  const current = TESTIMONIALS[currentIndex];
+  const current = testimonials[currentIndex] || TESTIMONIALS[0];
 
   return (
     <section className="py-24 bg-slate-50 dark:bg-slate-950 relative z-20 overflow-hidden">
@@ -76,7 +90,7 @@ export default function Testimonials() {
 
           {/* Indicators */}
           <div className="flex gap-2">
-            {TESTIMONIALS.map((_, idx) => (
+            {testimonials.map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => setCurrentIndex(idx)}

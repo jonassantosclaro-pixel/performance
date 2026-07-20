@@ -72,5 +72,72 @@ service cloud.firestore {
 
       allow delete: if isAdmin() && isValidId(postId);
     }
+
+    // Solutions collection
+    match /solutions/{solutionId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidId(solutionId) &&
+        request.resource.data.keys().hasAll(['title', 'icon', 'shortDesc', 'longDesc', 'category', 'benefits']) &&
+        request.resource.data.title is string && request.resource.data.title.size() <= 300 &&
+        request.resource.data.icon is string && request.resource.data.icon.size() <= 100 &&
+        request.resource.data.shortDesc is string && request.resource.data.shortDesc.size() <= 1000 &&
+        request.resource.data.longDesc is string && request.resource.data.longDesc.size() <= 10000 &&
+        request.resource.data.category is string &&
+        request.resource.data.benefits is list;
+      allow delete: if isAdmin() && isValidId(solutionId);
+    }
+
+    // Programs collection
+    match /programs/{programId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidId(programId) &&
+        request.resource.data.keys().hasAll(['title', 'description', 'target', 'period', 'color', 'tagline']) &&
+        request.resource.data.title is string && request.resource.data.title.size() <= 300 &&
+        request.resource.data.description is string && request.resource.data.description.size() <= 5000 &&
+        request.resource.data.target is string && request.resource.data.target.size() <= 500 &&
+        request.resource.data.period is string && request.resource.data.period.size() <= 200 &&
+        request.resource.data.color is string && request.resource.data.color.size() <= 200 &&
+        request.resource.data.tagline is string && request.resource.data.tagline.size() <= 500;
+      allow delete: if isAdmin() && isValidId(programId);
+    }
+
+    // Testimonials collection
+    match /testimonials/{testimonialId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidId(testimonialId) &&
+        request.resource.data.keys().hasAll(['name', 'role', 'company', 'text', 'rating']) &&
+        request.resource.data.name is string && request.resource.data.name.size() <= 200 &&
+        request.resource.data.role is string && request.resource.data.role.size() <= 200 &&
+        request.resource.data.company is string && request.resource.data.company.size() <= 200 &&
+        request.resource.data.text is string && request.resource.data.text.size() <= 2000 &&
+        request.resource.data.rating is number;
+      allow delete: if isAdmin() && isValidId(testimonialId);
+    }
+
+    // Gallery collection
+    match /gallery/{galleryId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidId(galleryId) &&
+        request.resource.data.keys().hasAll(['url', 'caption', 'category']) &&
+        request.resource.data.url is string && request.resource.data.url.size() <= 2000 &&
+        request.resource.data.caption is string && request.resource.data.caption.size() <= 1000 &&
+        request.resource.data.category is string && request.resource.data.category.size() <= 200;
+      allow delete: if isAdmin() && isValidId(galleryId);
+    }
+
+    // Reviews collection
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidId(reviewId) &&
+        request.resource.data.keys().hasAll(['name', 'role', 'company', 'rating', 'text', 'date', 'avatarBg']) &&
+        request.resource.data.name is string && request.resource.data.name.size() <= 200 &&
+        request.resource.data.role is string && request.resource.data.role.size() <= 200 &&
+        request.resource.data.company is string && request.resource.data.company.size() <= 200 &&
+        request.resource.data.text is string && request.resource.data.text.size() <= 2000 &&
+        request.resource.data.rating is number &&
+        request.resource.data.date is string && request.resource.data.date.size() <= 100 &&
+        request.resource.data.avatarBg is string && request.resource.data.avatarBg.size() <= 100;
+      allow delete: if isAdmin() && isValidId(reviewId);
+    }
   }
 }

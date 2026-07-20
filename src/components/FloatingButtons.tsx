@@ -105,7 +105,7 @@ export default function FloatingButtons({ settings }: FloatingButtonsProps) {
         <motion.button
           onClick={() => setIsAiOpen(true)}
           whileHover={{ scale: 1.05 }}
-          className="bg-white dark:bg-slate-900 rounded-full p-1.5 pr-5 shadow-xl flex items-center gap-3 border border-slate-200/80 dark:border-slate-800 cursor-pointer transition-all select-none text-left active:scale-95"
+          className="bg-white dark:bg-slate-900 rounded-full p-1.5 sm:pr-5 shadow-xl flex items-center gap-3 border border-slate-200/80 dark:border-slate-800 cursor-pointer transition-all select-none text-left active:scale-95"
           aria-label="Abrir Performance Assistente"
         >
           <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 relative shrink-0">
@@ -120,7 +120,7 @@ export default function FloatingButtons({ settings }: FloatingButtonsProps) {
               <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
             </span>
           </div>
-          <div>
+          <div className="hidden sm:block">
             <div className="text-[10px] font-black tracking-wider text-slate-400 uppercase font-mono leading-none">Performance Assistente</div>
             <div className="text-xs font-bold text-slate-800 dark:text-white mt-1">Como posso ajudar?</div>
           </div>

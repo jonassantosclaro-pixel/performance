@@ -1,11 +1,28 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { PROGRAMS } from "../data";
 import { Calendar, Target, CheckCircle2, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { listenToPrograms } from "../lib/firebase";
+import { Program } from "../types";
 
 export default function Programs() {
+  const [programs, setPrograms] = useState<Program[]>(PROGRAMS);
   const [activeTab, setActiveTab] = useState(PROGRAMS[0].id);
-  const activeProgram = PROGRAMS.find((p) => p.id === activeTab) || PROGRAMS[0];
+
+  useEffect(() => {
+    const unsubscribe = listenToPrograms((updatedPrograms) => {
+      if (updatedPrograms && updatedPrograms.length > 0) {
+        setPrograms(updatedPrograms);
+        // If current activeTab is no longer in the list, set to the first one
+        if (!updatedPrograms.some(p => p.id === activeTab)) {
+          setActiveTab(updatedPrograms[0].id);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, [activeTab]);
+
+  const activeProgram = programs.find((p) => p.id === activeTab) || programs[0] || PROGRAMS[0];
 
   return (
     <section id="programas" className="py-24 bg-white dark:bg-slate-900 relative z-20">
@@ -34,7 +51,7 @@ export default function Programs() {
           
           {/* Left: Tab selection list */}
           <div className="lg:col-span-4 flex flex-col space-y-3">
-            {PROGRAMS.map((program) => {
+            {programs.map((program) => {
               const isActive = program.id === activeTab;
               return (
                 <button

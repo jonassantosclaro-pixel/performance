@@ -1,12 +1,24 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { SOLUTIONS } from "../data";
 import { Solution } from "../types";
 import ServiceIcon from "./ServiceIcon";
 import { ArrowRight, Check, X, ShieldCheck, Sparkle } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { listenToSolutions } from "../lib/firebase";
 
 export default function Services() {
+  const [solutions, setSolutions] = useState<Solution[]>(SOLUTIONS);
   const [selectedSolution, setSelectedSolution] = useState<Solution | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = listenToSolutions((updatedSolutions) => {
+      if (updatedSolutions && updatedSolutions.length > 0) {
+        // Ensure we preserve order or just set them
+        setSolutions(updatedSolutions);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   return (
     <section id="solucoes" className="py-24 bg-slate-50 dark:bg-slate-950 relative z-20">
@@ -32,7 +44,7 @@ export default function Services() {
 
         {/* Services Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {SOLUTIONS.map((solution, index) => (
+          {solutions.map((solution, index) => (
             <motion.div
               key={solution.id}
               initial={{ opacity: 0, y: 30 }}

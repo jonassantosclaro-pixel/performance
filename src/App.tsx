@@ -19,7 +19,15 @@ import { bootstrapAndTrackViews, GlobalSettings } from "./lib/firebase";
 
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("darkMode");
+      if (saved !== null) {
+        return saved === "true";
+      }
+    }
+    return true; // Default to dark mode for premium experience
+  });
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [settings, setSettings] = useState<GlobalSettings>({
     instagram: "https://instagram.com/performance.treinamentos",
@@ -55,6 +63,7 @@ export default function App() {
 
   // Sync dark mode class with state
   useEffect(() => {
+    localStorage.setItem("darkMode", String(darkMode));
     if (darkMode) {
       document.documentElement.classList.add("dark");
     } else {
@@ -100,8 +109,8 @@ export default function App() {
 
       {/* Main Page Content */}
       <main className="relative z-10">
-        <Hero />
-        <Stats />
+        <Hero settings={settings} />
+        <Stats settings={settings} />
         <WhereWeAct />
         <Services />
         <Programs />

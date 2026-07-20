@@ -181,7 +181,7 @@ export default function SplashIntro({ onComplete }: SplashIntroProps) {
         y: "-100%",
         transition: { duration: 0.8, ease: [0.76, 0, 0.24, 1] }
       }}
-      className="fixed inset-0 z-[9999] bg-[#0D1B2A] flex flex-col items-center justify-center overflow-hidden cursor-pointer select-none"
+      className="fixed inset-0 z-[9999] bg-[#0E1728] flex flex-col items-center justify-center overflow-hidden cursor-pointer select-none"
     >
       {/* Background radial highlight glow */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,122,0,0.12)_0%,transparent_60%)] pointer-events-none" />

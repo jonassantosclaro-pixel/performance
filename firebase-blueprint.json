@@ -80,6 +80,73 @@
         }
       },
       "required": ["title", "content", "summary", "imageUrl", "category", "author", "createdAt"]
+    },
+    "Solution": {
+      "title": "Solution",
+      "description": "An innovative corporate solution, service or show.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "icon": { "type": "string" },
+        "shortDesc": { "type": "string" },
+        "longDesc": { "type": "string" },
+        "category": { "type": "string", "enum": ["seguranca", "saude", "bem-estar", "interativo"] },
+        "benefits": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["title", "icon", "shortDesc", "longDesc", "category", "benefits"]
+    },
+    "Program": {
+      "title": "Program",
+      "description": "A customized health and safety campaign program (e.g. SIPAT).",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "target": { "type": "string" },
+        "period": { "type": "string" },
+        "color": { "type": "string" },
+        "tagline": { "type": "string" }
+      },
+      "required": ["title", "description", "target", "period", "color", "tagline"]
+    },
+    "Testimonial": {
+      "title": "Testimonial",
+      "description": "Customer feedback and reviews.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "company": { "type": "string" },
+        "text": { "type": "string" },
+        "rating": { "type": "number" }
+      },
+      "required": ["name", "role", "company", "text", "rating"]
+    },
+    "GalleryItem": {
+      "title": "GalleryItem",
+      "description": "An image or photo shown in the media gallery.",
+      "type": "object",
+      "properties": {
+        "url": { "type": "string" },
+        "caption": { "type": "string" },
+        "category": { "type": "string" }
+      },
+      "required": ["url", "caption", "category"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "A Google or custom client review.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "company": { "type": "string" },
+        "rating": { "type": "number" },
+        "text": { "type": "string" },
+        "date": { "type": "string" },
+        "avatarBg": { "type": "string" }
+      },
+      "required": ["name", "role", "company", "rating", "text", "date", "avatarBg"]
     }
   },
   "firestore": {
@@ -94,6 +161,26 @@
     "/posts/{postId}": {
       "schema": "BlogPost",
       "description": "Blog posts and news articles created by Performance administration."
+    },
+    "/solutions/{solutionId}": {
+      "schema": "Solution",
+      "description": "List of innovative corporate services and solution items."
+    },
+    "/programs/{programId}": {
+      "schema": "Program",
+      "description": "List of customized campaigns and wellness programs."
+    },
+    "/testimonials/{testimonialId}": {
+      "schema": "Testimonial",
+      "description": "List of client feedback and testimonials."
+    },
+    "/gallery/{galleryId}": {
+      "schema": "GalleryItem",
+      "description": "Media gallery images and captions."
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Active Google and custom client reviews."
     }
   }
 }

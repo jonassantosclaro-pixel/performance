@@ -1,62 +1,29 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Star, ShieldCheck, ThumbsUp, Calendar, ArrowRight, CheckCircle2 } from "lucide-react";
 import { motion } from "motion/react";
-
-interface Review {
-  id: number;
-  name: string;
-  role: string;
-  company: string;
-  rating: number;
-  text: string;
-  date: string;
-  avatarBg: string;
-}
-
-const REVIEWS_DATA: Review[] = [
-  {
-    id: 1,
-    name: "Mariana Menezes",
-    role: "Coordenadora de EHS (Segurança do Trabalho)",
-    company: "Nestlé Brasil",
-    rating: 5,
-    text: "O teatro corporativo de SIPAT da Performance foi o melhor que já contratamos! Leve, engraçado e com uma mensagem de prevenção de acidentes impecável. Nossos colaboradores amaram e engajaram 100%.",
-    date: "Há 1 semana",
-    avatarBg: "bg-sky-600"
-  },
-  {
-    id: 2,
-    name: "Rodrigo Silva",
-    role: "Gerente de Recursos Humanos",
-    company: "Ambev",
-    rating: 5,
-    text: "Contratamos o programa integrado de Quick Massage e Ergonomia para o escritório central. A equipe da Performance é super profissional, pontual e as sessões trouxeram um alívio de estresse visível para a equipe.",
-    date: "Há 2 semanas",
-    avatarBg: "bg-emerald-600"
-  },
-  {
-    id: 3,
-    name: "Ana Paula Costa",
-    role: "Diretora de QVT (Qualidade de Vida)",
-    company: "Itaú Unibanco",
-    rating: 5,
-    text: "As palestras show focadas em Saúde Mental e Equilíbrio Emocional foram um divisor de águas na nossa semana da saúde. Abordagem com empatia, leveza e embasamento científico fantástico.",
-    date: "Há 1 mês",
-    avatarBg: "bg-purple-600"
-  },
-  {
-    id: 4,
-    name: "Juliana Vasconcelos",
-    role: "Gestora de DHO",
-    company: "Johnson & Johnson",
-    rating: 5,
-    text: "Excelente atendimento comercial e execução técnica espetacular. Adaptaram as dinâmicas teatrais para a realidade do nosso chão de fábrica de forma genial. Superou nossas expectativas!",
-    date: "Há 1 mês",
-    avatarBg: "bg-amber-600"
-  }
-];
+import { REVIEWS_DATA as DEFAULT_REVIEWS } from "../data";
+import { listenToReviews } from "../lib/firebase";
+import { Review } from "../types";
 
 export default function Gallery() {
+  const [reviews, setReviews] = useState<Review[]>([]);
+
+  useEffect(() => {
+    const unsubscribe = listenToReviews((updatedReviews) => {
+      if (updatedReviews && updatedReviews.length > 0) {
+        setReviews(updatedReviews);
+      } else {
+        // Fallback to defaults typecasted properly
+        const formattedDefaults = DEFAULT_REVIEWS.map(r => ({
+          ...r,
+          id: String(r.id)
+        })) as any;
+        setReviews(formattedDefaults);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   return (
     <section id="galeria" className="py-24 bg-slate-50 dark:bg-slate-950 relative z-20 overflow-hidden">
       {/* Decorative backdrop gradients */}
@@ -169,7 +136,7 @@ export default function Gallery() {
 
           {/* RIGHT: Active Google Reviews Grid */}
           <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-            {REVIEWS_DATA.map((review, idx) => (
+            {reviews.map((review, idx) => (
               <motion.div
                 key={review.id}
                 initial={{ opacity: 0, y: 20 }}

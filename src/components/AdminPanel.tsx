@@ -8,22 +8,38 @@ import {
   saveBlogPost,
   deleteBlogPost,
   GlobalSettings,
-  BlogPost
+  BlogPost,
+  listenToSolutions,
+  saveSolution,
+  deleteSolution,
+  listenToPrograms,
+  saveProgram,
+  deleteProgram,
+  listenToTestimonials,
+  saveTestimonial,
+  deleteTestimonial,
+  listenToReviews,
+  saveReview,
+  deleteReview
 } from "../lib/firebase";
 import { User as FirebaseUser } from "firebase/auth";
 import { 
   Lock, Eye, Mail, Phone, Instagram, LogOut, CheckCircle2, 
   Loader2, X, ShieldAlert, Sparkles, Plus, Edit2, Trash2, 
-  ArrowLeft, Image as ImageIcon, Tag, User, Newspaper 
+  ArrowLeft, Image as ImageIcon, Tag, User, Newspaper,
+  Briefcase, Calendar, Star, Smile, ChevronRight, Layers, HelpCircle, ThumbsUp
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "motion/react";
+import { Solution, Program, Testimonial, Review } from "../types";
 
 interface AdminPanelProps {
   isOpen: boolean;
   onClose: () => void;
   settings: GlobalSettings;
 }
+
+type TabType = "settings" | "solutions" | "programs" | "testimonials" | "reviews" | "blog";
 
 export default function AdminPanel({ isOpen, onClose, settings }: AdminPanelProps) {
   const [email, setEmail] = useState("");
@@ -32,18 +48,31 @@ export default function AdminPanel({ isOpen, onClose, settings }: AdminPanelProp
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Tabs & Lists State
-  const [activeTab, setActiveTab] = useState<"settings" | "blog">("settings");
-  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
-  const [isEditingPost, setIsEditingPost] = useState(false);
-  const [isSavingPost, setIsSavingPost] = useState(false);
+  // Tabs
+  const [activeTab, setActiveTab] = useState<TabType>("settings");
 
-  // Edit states for general settings
+  // --- Real-time Collections Data ---
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
+  const [solutions, setSolutions] = useState<Solution[]>([]);
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+
+  // --- General Settings Edit states ---
   const [editInstagram, setEditInstagram] = useState(settings.instagram);
   const [editWhatsapp, setEditWhatsapp] = useState(settings.whatsapp);
   const [editEmail, setEditEmail] = useState(settings.email);
+  const [editHeroTitle, setEditHeroTitle] = useState(settings.heroTitle || "");
+  const [editHeroSubtitle, setEditHeroSubtitle] = useState(settings.heroSubtitle || "");
+  const [editHeroCta, setEditHeroCta] = useState(settings.heroCta || "");
+  const [editStatsColaboradores, setEditStatsColaboradores] = useState(settings.statsColaboradores || 450000);
+  const [editStatsEventos, setEditStatsEventos] = useState(settings.statsEventos || 2500);
+  const [editStatsEmpresas, setEditStatsEmpresas] = useState(settings.statsEmpresas || 850);
+  const [editStatsAprovacao, setEditStatsAprovacao] = useState(settings.statsAprovacao || 98);
 
-  // Edit states for blog posts
+  // --- CRUD Active Forms / Editing states ---
+  const [isEditingPost, setIsEditingPost] = useState(false);
+  const [isSavingPost, setIsSavingPost] = useState(false);
   const [editPostData, setEditPostData] = useState<Omit<BlogPost, "id"> & { id?: string }>({
     title: "",
     content: "",
@@ -54,12 +83,64 @@ export default function AdminPanel({ isOpen, onClose, settings }: AdminPanelProp
     createdAt: ""
   });
 
+  const [isEditingSol, setIsEditingSol] = useState(false);
+  const [isSavingSol, setIsSavingSol] = useState(false);
+  const [editSolData, setEditSolData] = useState<Omit<Solution, "id"> & { id?: string, benefitsString?: string }>({
+    title: "",
+    icon: "Shield",
+    shortDesc: "",
+    longDesc: "",
+    category: "seguranca",
+    benefits: [],
+    benefitsString: ""
+  });
+
+  const [isEditingProg, setIsEditingProg] = useState(false);
+  const [isSavingProg, setIsSavingProg] = useState(false);
+  const [editProgData, setEditProgData] = useState<Omit<Program, "id"> & { id?: string }>({
+    title: "",
+    description: "",
+    target: "",
+    period: "",
+    color: "from-sky-500 to-indigo-600",
+    tagline: ""
+  });
+
+  const [isEditingTest, setIsEditingTest] = useState(false);
+  const [isSavingTest, setIsSavingTest] = useState(false);
+  const [editTestData, setEditTestData] = useState<Omit<Testimonial, "id"> & { id?: string }>({
+    name: "",
+    role: "",
+    company: "",
+    text: "",
+    rating: 5
+  });
+
+  const [isEditingRev, setIsEditingRev] = useState(false);
+  const [isSavingRev, setIsSavingRev] = useState(false);
+  const [editRevData, setEditRevData] = useState<Omit<Review, "id"> & { id?: string }>({
+    name: "",
+    role: "",
+    company: "",
+    rating: 5,
+    text: "",
+    date: "Há 1 semana",
+    avatarBg: "bg-sky-600"
+  });
+
   // Synchronize local edit states with database updates
   useEffect(() => {
     if (settings) {
       setEditInstagram(settings.instagram);
       setEditWhatsapp(settings.whatsapp);
       setEditEmail(settings.email);
+      setEditHeroTitle(settings.heroTitle || "");
+      setEditHeroSubtitle(settings.heroSubtitle || "");
+      setEditHeroCta(settings.heroCta || "");
+      setEditStatsColaboradores(settings.statsColaboradores || 450000);
+      setEditStatsEventos(settings.statsEventos || 2500);
+      setEditStatsEmpresas(settings.statsEmpresas || 850);
+      setEditStatsAprovacao(settings.statsAprovacao || 98);
     }
   }, [settings]);
 
@@ -71,13 +152,23 @@ export default function AdminPanel({ isOpen, onClose, settings }: AdminPanelProp
     return () => unsubscribe();
   }, []);
 
-  // Listen to blog posts when authenticated
+  // Listen to all dynamic collections when authenticated
   useEffect(() => {
     if (!adminUser) return;
-    const unsubscribe = listenToBlogPosts((posts) => {
-      setBlogPosts(posts);
-    });
-    return () => unsubscribe();
+
+    const unsubBlog = listenToBlogPosts(setBlogPosts);
+    const unsubSol = listenToSolutions(setSolutions);
+    const unsubProg = listenToPrograms(setPrograms);
+    const unsubTest = listenToTestimonials(setTestimonials);
+    const unsubRev = listenToReviews(setReviews);
+
+    return () => {
+      unsubBlog();
+      unsubSol();
+      unsubProg();
+      unsubTest();
+      unsubRev();
+    };
   }, [adminUser]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -101,8 +192,8 @@ export default function AdminPanel({ isOpen, onClose, settings }: AdminPanelProp
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editInstagram || !editWhatsapp || !editEmail) {
-      toast.error("Todos os campos de contato são obrigatórios.");
+    if (!editInstagram || !editWhatsapp || !editEmail || !editHeroTitle || !editHeroSubtitle || !editHeroCta) {
+      toast.error("Todos os campos obrigatórios (*) devem ser preenchidos.");
       return;
     }
 
@@ -111,7 +202,14 @@ export default function AdminPanel({ isOpen, onClose, settings }: AdminPanelProp
       await saveGlobalSettings({
         instagram: editInstagram,
         whatsapp: editWhatsapp,
-        email: editEmail
+        email: editEmail,
+        heroTitle: editHeroTitle,
+        heroSubtitle: editHeroSubtitle,
+        heroCta: editHeroCta,
+        statsColaboradores: Number(editStatsColaboradores),
+        statsEventos: Number(editStatsEventos),
+        statsEmpresas: Number(editStatsEmpresas),
+        statsAprovacao: Number(editStatsAprovacao)
       });
       toast.success("Configurações atualizadas com sucesso!");
     } catch (error) {
@@ -127,13 +225,275 @@ export default function AdminPanel({ isOpen, onClose, settings }: AdminPanelProp
       await signAdminOut();
       setActiveTab("settings");
       setIsEditingPost(false);
+      setIsEditingSol(false);
+      setIsEditingProg(false);
+      setIsEditingTest(false);
+      setIsEditingRev(false);
       toast.success("Logout realizado com sucesso.");
     } catch (error) {
       toast.error("Erro ao sair da conta.");
     }
   };
 
-  // Blog Handlers
+  // --- SOLUTIONS CRUD HANDLERS ---
+  const handleCreateSolClick = () => {
+    setEditSolData({
+      title: "",
+      icon: "Shield",
+      shortDesc: "",
+      longDesc: "",
+      category: "seguranca",
+      benefits: [],
+      benefitsString: ""
+    });
+    setIsEditingSol(true);
+  };
+
+  const handleEditSolClick = (sol: Solution) => {
+    setEditSolData({
+      id: sol.id,
+      title: sol.title,
+      icon: sol.icon,
+      shortDesc: sol.shortDesc,
+      longDesc: sol.longDesc,
+      category: sol.category,
+      benefits: sol.benefits || [],
+      benefitsString: (sol.benefits || []).join(", ")
+    });
+    setIsEditingSol(true);
+  };
+
+  const handleDeleteSol = async (id: string) => {
+    if (!window.confirm("Deseja excluir permanentemente esta solução?")) return;
+    try {
+      await deleteSolution(id);
+      toast.success("Solução excluída!");
+    } catch (err) {
+      toast.error("Erro ao excluir solução.");
+    }
+  };
+
+  const handleSaveSolution = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editSolData.title || !editSolData.shortDesc || !editSolData.longDesc) {
+      toast.error("Preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    setIsSavingSol(true);
+    try {
+      const parsedBenefits = editSolData.benefitsString
+        ? editSolData.benefitsString.split(",").map(b => b.trim()).filter(Boolean)
+        : [];
+
+      await saveSolution({
+        title: editSolData.title,
+        icon: editSolData.icon || "Shield",
+        shortDesc: editSolData.shortDesc,
+        longDesc: editSolData.longDesc,
+        category: editSolData.category || "seguranca",
+        benefits: parsedBenefits,
+        id: editSolData.id
+      });
+      toast.success(editSolData.id ? "Solução atualizada!" : "Nova solução criada!");
+      setIsEditingSol(false);
+    } catch (err) {
+      toast.error("Erro ao salvar solução.");
+    } finally {
+      setIsSavingSol(false);
+    }
+  };
+
+  // --- PROGRAMS CRUD HANDLERS ---
+  const handleCreateProgClick = () => {
+    setEditProgData({
+      title: "",
+      description: "",
+      target: "Colaboradores em geral, gestores e técnicos de segurança",
+      period: "1 dia (SIPAT) ou contínuo",
+      color: "from-sky-500 to-indigo-600",
+      tagline: ""
+    });
+    setIsEditingProg(true);
+  };
+
+  const handleEditProgClick = (prog: Program) => {
+    setEditProgData({
+      id: prog.id,
+      title: prog.title,
+      description: prog.description,
+      target: prog.target,
+      period: prog.period,
+      color: prog.color,
+      tagline: prog.tagline
+    });
+    setIsEditingProg(true);
+  };
+
+  const handleDeleteProg = async (id: string) => {
+    if (!window.confirm("Deseja excluir permanentemente este programa?")) return;
+    try {
+      await deleteProgram(id);
+      toast.success("Programa excluído!");
+    } catch (err) {
+      toast.error("Erro ao excluir programa.");
+    }
+  };
+
+  const handleSaveProgram = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editProgData.title || !editProgData.description || !editProgData.tagline) {
+      toast.error("Preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    setIsSavingProg(true);
+    try {
+      await saveProgram({
+        title: editProgData.title,
+        description: editProgData.description,
+        target: editProgData.target,
+        period: editProgData.period,
+        color: editProgData.color || "from-sky-500 to-indigo-600",
+        tagline: editProgData.tagline,
+        id: editProgData.id
+      });
+      toast.success(editProgData.id ? "Programa atualizado!" : "Novo programa criado!");
+      setIsEditingProg(false);
+    } catch (err) {
+      toast.error("Erro ao salvar programa.");
+    } finally {
+      setIsSavingProg(false);
+    }
+  };
+
+  // --- TESTIMONIALS CRUD HANDLERS ---
+  const handleCreateTestClick = () => {
+    setEditTestData({
+      name: "",
+      role: "",
+      company: "",
+      text: "",
+      rating: 5
+    });
+    setIsEditingTest(true);
+  };
+
+  const handleEditTestClick = (test: Testimonial) => {
+    setEditTestData({
+      id: test.id,
+      name: test.name,
+      role: test.role,
+      company: test.company,
+      text: test.text,
+      rating: test.rating
+    });
+    setIsEditingTest(true);
+  };
+
+  const handleDeleteTest = async (id: string) => {
+    if (!window.confirm("Deseja excluir permanentemente este depoimento?")) return;
+    try {
+      await deleteTestimonial(id);
+      toast.success("Depoimento excluído!");
+    } catch (err) {
+      toast.error("Erro ao excluir depoimento.");
+    }
+  };
+
+  const handleSaveTestimonial = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTestData.name || !editTestData.text || !editTestData.role || !editTestData.company) {
+      toast.error("Preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    setIsSavingTest(true);
+    try {
+      await saveTestimonial({
+        name: editTestData.name,
+        role: editTestData.role,
+        company: editTestData.company,
+        text: editTestData.text,
+        rating: Number(editTestData.rating),
+        id: editTestData.id
+      });
+      toast.success(editTestData.id ? "Depoimento atualizado!" : "Novo depoimento publicado!");
+      setIsEditingTest(false);
+    } catch (err) {
+      toast.error("Erro ao salvar depoimento.");
+    } finally {
+      setIsSavingTest(false);
+    }
+  };
+
+  // --- REVIEWS CRUD HANDLERS ---
+  const handleCreateRevClick = () => {
+    setEditRevData({
+      name: "",
+      role: "Gestor(a)",
+      company: "",
+      rating: 5,
+      text: "",
+      date: "Há 1 semana",
+      avatarBg: "bg-sky-600"
+    });
+    setIsEditingRev(true);
+  };
+
+  const handleEditRevClick = (rev: Review) => {
+    setEditRevData({
+      id: rev.id,
+      name: rev.name,
+      role: rev.role,
+      company: rev.company,
+      rating: rev.rating,
+      text: rev.text,
+      date: rev.date,
+      avatarBg: rev.avatarBg
+    });
+    setIsEditingRev(true);
+  };
+
+  const handleDeleteRev = async (id: string) => {
+    if (!window.confirm("Deseja excluir esta avaliação?")) return;
+    try {
+      await deleteReview(id);
+      toast.success("Avaliação excluída!");
+    } catch (err) {
+      toast.error("Erro ao excluir avaliação.");
+    }
+  };
+
+  const handleSaveReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editRevData.name || !editRevData.text || !editRevData.company) {
+      toast.error("Preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    setIsSavingRev(true);
+    try {
+      await saveReview({
+        name: editRevData.name,
+        role: editRevData.role,
+        company: editRevData.company,
+        rating: Number(editRevData.rating),
+        text: editRevData.text,
+        date: editRevData.date || "Há 1 semana",
+        avatarBg: editRevData.avatarBg || "bg-sky-600",
+        id: editRevData.id
+      });
+      toast.success(editRevData.id ? "Avaliação atualizada!" : "Nova avaliação criada!");
+      setIsEditingRev(false);
+    } catch (err) {
+      toast.error("Erro ao salvar avaliação.");
+    } finally {
+      setIsSavingRev(false);
+    }
+  };
+
+  // --- BLOG CRUD HANDLERS ---
   const handleCreatePostClick = () => {
     setEditPostData({
       title: "",
@@ -207,13 +567,13 @@ export default function AdminPanel({ isOpen, onClose, settings }: AdminPanelProp
             className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm cursor-pointer"
           />
 
-          {/* Modal box (widened to max-w-3xl for premium dashboard experience when logged in) */}
+          {/* Modal box (widened to max-w-4xl for dynamic multisection dashboard) */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
             className={`relative w-full ${
-              adminUser ? "max-w-3xl" : "max-w-lg"
+              adminUser ? "max-w-4xl" : "max-w-lg"
             } bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden z-10 transition-all duration-300 max-h-[90vh] flex flex-col`}
           >
             {/* Header */}
@@ -300,22 +660,66 @@ export default function AdminPanel({ isOpen, onClose, settings }: AdminPanelProp
                 <div className="flex flex-col h-full">
                   
                   {/* TAB SWITCHER BAR */}
-                  <div className="px-6 border-b border-slate-100 dark:border-slate-800 flex gap-6 bg-slate-50/30 dark:bg-slate-950/10 shrink-0">
+                  <div className="px-6 border-b border-slate-100 dark:border-slate-800 flex gap-4 overflow-x-auto bg-slate-50/30 dark:bg-slate-950/10 shrink-0 scrollbar-none">
                     <button
                       type="button"
                       onClick={() => { setActiveTab("settings"); setIsEditingPost(false); }}
-                      className={`py-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+                      className={`py-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap ${
                         activeTab === "settings"
                           ? "border-sky-600 text-sky-600 dark:text-sky-400"
                           : "border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-white"
                       }`}
                     >
-                      Configurações Gerais
+                      Home/Gerais
                     </button>
                     <button
                       type="button"
-                      onClick={() => { setActiveTab("blog"); }}
-                      className={`py-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+                      onClick={() => { setActiveTab("solutions"); setIsEditingSol(false); }}
+                      className={`py-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                        activeTab === "solutions"
+                          ? "border-sky-600 text-sky-600 dark:text-sky-400"
+                          : "border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                      }`}
+                    >
+                      Soluções/Serviços
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setActiveTab("programs"); setIsEditingProg(false); }}
+                      className={`py-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                        activeTab === "programs"
+                          ? "border-sky-600 text-sky-600 dark:text-sky-400"
+                          : "border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                      }`}
+                    >
+                      Programas
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setActiveTab("testimonials"); setIsEditingTest(false); }}
+                      className={`py-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                        activeTab === "testimonials"
+                          ? "border-sky-600 text-sky-600 dark:text-sky-400"
+                          : "border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                      }`}
+                    >
+                      Depoimentos (Slider)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setActiveTab("reviews"); setIsEditingRev(false); }}
+                      className={`py-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                        activeTab === "reviews"
+                          ? "border-sky-600 text-sky-600 dark:text-sky-400"
+                          : "border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                      }`}
+                    >
+                      Avaliações Google
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setActiveTab("blog"); setIsEditingPost(false); }}
+                      className={`py-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap ${
                         activeTab === "blog"
                           ? "border-sky-600 text-sky-600 dark:text-sky-400"
                           : "border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-white"
@@ -327,8 +731,8 @@ export default function AdminPanel({ isOpen, onClose, settings }: AdminPanelProp
 
                   {/* TAB CONTENTS */}
                   <div className="p-6">
-                    {activeTab === "settings" ? (
-                      /* TAB 1: GENERAL SETTINGS */
+                    {activeTab === "settings" && (
+                      /* TAB 1: GENERAL SETTINGS & HERO & STATS */
                       <div className="space-y-6 text-left">
                         {/* Visitor analytics badge block */}
                         <div className="p-6 bg-gradient-to-br from-sky-500/10 to-emerald-500/10 dark:from-sky-950/20 dark:to-emerald-950/20 rounded-3xl border border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
@@ -346,56 +750,158 @@ export default function AdminPanel({ isOpen, onClose, settings }: AdminPanelProp
                         </div>
 
                         {/* Settings modification form */}
-                        <form onSubmit={handleSaveSettings} className="space-y-4">
-                          <h4 className="text-xs font-mono font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                            <Sparkles className="w-4.5 h-4.5 text-amber-500" />
-                            Editar Dados Oficiais de Contato
-                          </h4>
+                        <form onSubmit={handleSaveSettings} className="space-y-6">
+                          
+                          {/* Hero Landing Copy Customization */}
+                          <div className="space-y-4">
+                            <h4 className="text-xs font-mono font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 border-b border-slate-100 dark:border-slate-800 pb-2">
+                              <Sparkles className="w-4 h-4 text-amber-500" />
+                              Personalizar Banner Principal (Hero)
+                            </h4>
+                            
+                            <div>
+                              <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">
+                                Título Principal (Heading Hero) *
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                value={editHeroTitle}
+                                onChange={(e) => setEditHeroTitle(e.target.value)}
+                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-sm focus:outline-none focus:border-sky-500 font-medium"
+                              />
+                            </div>
 
-                          {/* Instagram input */}
-                          <div>
-                            <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
-                              <Instagram className="w-4 h-4 text-purple-500" /> Instagram Oficial
-                            </label>
-                            <input
-                              type="url"
-                              required
-                              value={editInstagram}
-                              onChange={(e) => setEditInstagram(e.target.value)}
-                              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-sm focus:outline-none focus:border-sky-500"
-                            />
+                            <div>
+                              <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">
+                                Subtítulo de Apoio *
+                              </label>
+                              <textarea
+                                required
+                                rows={3}
+                                value={editHeroSubtitle}
+                                onChange={(e) => setEditHeroSubtitle(e.target.value)}
+                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-sm focus:outline-none focus:border-sky-500 leading-relaxed"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">
+                                Texto do Botão CTA principal *
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                value={editHeroCta}
+                                onChange={(e) => setEditHeroCta(e.target.value)}
+                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-sm focus:outline-none focus:border-sky-500"
+                              />
+                            </div>
                           </div>
 
-                          {/* Whatsapp input */}
-                          <div>
-                            <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
-                              <Phone className="w-4 h-4 text-emerald-500" /> WhatsApp Comercial (Com DDI/DDD, apenas números)
-                            </label>
-                            <input
-                              type="text"
-                              required
-                              value={editWhatsapp}
-                              onChange={(e) => setEditWhatsapp(e.target.value)}
-                              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-sm focus:outline-none focus:border-sky-500"
-                            />
+                          {/* Stats Counters */}
+                          <div className="space-y-4">
+                            <h4 className="text-xs font-mono font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 border-b border-slate-100 dark:border-slate-800 pb-2">
+                              <Smile className="w-4 h-4 text-emerald-500" />
+                              Painel de Métricas e Contadores
+                            </h4>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Colaboradores</label>
+                                <input
+                                  type="number"
+                                  required
+                                  value={editStatsColaboradores}
+                                  onChange={(e) => setEditStatsColaboradores(Number(e.target.value))}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none focus:border-sky-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Eventos</label>
+                                <input
+                                  type="number"
+                                  required
+                                  value={editStatsEventos}
+                                  onChange={(e) => setEditStatsEventos(Number(e.target.value))}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none focus:border-sky-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Empresas</label>
+                                <input
+                                  type="number"
+                                  required
+                                  value={editStatsEmpresas}
+                                  onChange={(e) => setEditStatsEmpresas(Number(e.target.value))}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none focus:border-sky-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Aprovação %</label>
+                                <input
+                                  type="number"
+                                  required
+                                  value={editStatsAprovacao}
+                                  onChange={(e) => setEditStatsAprovacao(Number(e.target.value))}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none focus:border-sky-500"
+                                />
+                              </div>
+                            </div>
                           </div>
 
-                          {/* Email input */}
-                          <div>
-                            <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
-                              <Mail className="w-4 h-4 text-sky-500" /> E-mail Comercial
-                            </label>
-                            <input
-                              type="email"
-                              required
-                              value={editEmail}
-                              onChange={(e) => setEditEmail(e.target.value)}
-                              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-sm focus:outline-none focus:border-sky-500"
-                            />
+                          {/* Contact Channels */}
+                          <div className="space-y-4">
+                            <h4 className="text-xs font-mono font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 border-b border-slate-100 dark:border-slate-800 pb-2">
+                              <Mail className="w-4 h-4 text-sky-500" />
+                              Canais Gerais de Contato e Redes
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              {/* Instagram input */}
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1 flex items-center gap-1.5">
+                                  Instagram URL *
+                                </label>
+                                <input
+                                  type="url"
+                                  required
+                                  value={editInstagram}
+                                  onChange={(e) => setEditInstagram(e.target.value)}
+                                  className="w-full px-3.5 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none focus:border-sky-500"
+                                />
+                              </div>
+
+                              {/* Whatsapp input */}
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1 flex items-center gap-1.5">
+                                  WhatsApp (com DDD) *
+                                </label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={editWhatsapp}
+                                  onChange={(e) => setEditWhatsapp(e.target.value)}
+                                  className="w-full px-3.5 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none focus:border-sky-500"
+                                />
+                              </div>
+
+                              {/* Email input */}
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1 flex items-center gap-1.5">
+                                  E-mail Comercial *
+                                </label>
+                                <input
+                                  type="email"
+                                  required
+                                  value={editEmail}
+                                  onChange={(e) => setEditEmail(e.target.value)}
+                                  className="w-full px-3.5 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none focus:border-sky-500"
+                                />
+                              </div>
+                            </div>
                           </div>
 
                           {/* Actions bar */}
-                          <div className="pt-4 flex items-center justify-between gap-4 border-t border-slate-100 dark:border-slate-800 mt-6">
+                          <div className="pt-4 flex items-center justify-between gap-4 border-t border-slate-100 dark:border-slate-800 mt-6 shrink-0">
                             <button
                               type="button"
                               onClick={handleLogout}
@@ -425,8 +931,645 @@ export default function AdminPanel({ isOpen, onClose, settings }: AdminPanelProp
                           </div>
                         </form>
                       </div>
-                    ) : (
-                      /* TAB 2: BLOG MANAGEMENT */
+                    )}
+
+                    {activeTab === "solutions" && (
+                      /* TAB 2: SOLUTIONS/SERVICES CRUD */
+                      <div className="text-left space-y-4">
+                        {isEditingSol ? (
+                          <form onSubmit={handleSaveSolution} className="space-y-4">
+                            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
+                              <button
+                                type="button"
+                                onClick={() => setIsEditingSol(false)}
+                                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
+                              >
+                                <ArrowLeft className="w-4 h-4" />
+                                Voltar para Lista
+                              </button>
+                              <span className="text-[10px] font-black uppercase tracking-widest text-sky-600 bg-sky-100/40 dark:bg-sky-950/60 px-2.5 py-1 rounded-md">
+                                {editSolData.id ? "Editando Solução" : "Nova Solução"}
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Título da Solução *</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={editSolData.title}
+                                  onChange={(e) => setEditSolData({ ...editSolData, title: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Categoria *</label>
+                                <select
+                                  value={editSolData.category}
+                                  onChange={(e) => setEditSolData({ ...editSolData, category: e.target.value as any })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white text-xs"
+                                >
+                                  <option value="seguranca">Segurança</option>
+                                  <option value="saude">Saúde</option>
+                                  <option value="bem-estar">Bem-Estar</option>
+                                  <option value="interativo">Interativo</option>
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Ícone (Nome do Ícone Lucide) *</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={editSolData.icon}
+                                  onChange={(e) => setEditSolData({ ...editSolData, icon: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none"
+                                  placeholder="Shield, Heart, Smile, Sparkles, Brain, Dumbbell"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Descrição Curta *</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={editSolData.shortDesc}
+                                  onChange={(e) => setEditSolData({ ...editSolData, shortDesc: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none"
+                                />
+                              </div>
+
+                              <div className="md:col-span-2">
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Descrição Longa *</label>
+                                <textarea
+                                  required
+                                  rows={4}
+                                  value={editSolData.longDesc}
+                                  onChange={(e) => setEditSolData({ ...editSolData, longDesc: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none"
+                                />
+                              </div>
+
+                              <div className="md:col-span-2">
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1 flex items-center gap-1">
+                                  <Layers className="w-3.5 h-3.5 text-sky-500" />
+                                  Benefícios (Separados por vírgulas)
+                                </label>
+                                <input
+                                  type="text"
+                                  value={editSolData.benefitsString}
+                                  onChange={(e) => setEditSolData({ ...editSolData, benefitsString: e.target.value })}
+                                  placeholder="Mensagem clara, Alta interatividade, Fixação de hábitos, Engajamento total"
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setIsEditingSol(false)}
+                                className="px-4 py-2 text-xs font-semibold bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-700 dark:text-white transition-colors cursor-pointer"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                type="submit"
+                                disabled={isSavingSol}
+                                className="px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
+                              >
+                                {isSavingSol ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                                Salvar Solução
+                              </button>
+                            </div>
+                          </form>
+                        ) : (
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <Briefcase className="w-4 h-4 text-sky-500" />
+                                Soluções e Atividades Cadastradas ({solutions.length})
+                              </h4>
+                              <button
+                                type="button"
+                                onClick={handleCreateSolClick}
+                                className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-all hover:scale-105"
+                              >
+                                <Plus className="w-4 h-4" />
+                                Nova Solução
+                              </button>
+                            </div>
+
+                            <div className="border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden bg-slate-50/50 dark:bg-slate-950/20 max-h-[45vh] overflow-y-auto">
+                              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                                {solutions.map((sol) => (
+                                  <div key={sol.id} className="p-4 flex items-center justify-between hover:bg-slate-100/40 dark:hover:bg-slate-900/40 transition-colors gap-4">
+                                    <div className="text-left">
+                                      <h5 className="font-bold text-xs text-slate-900 dark:text-white">{sol.title}</h5>
+                                      <span className="text-[9px] font-bold text-sky-500 uppercase tracking-widest">{sol.category}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleEditSolClick(sol)}
+                                        className="p-1.5 rounded-lg text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/40 cursor-pointer"
+                                      >
+                                        <Edit2 className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteSol(sol.id)}
+                                        className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {activeTab === "programs" && (
+                      /* TAB 3: PROGRAMS CRUD */
+                      <div className="text-left space-y-4">
+                        {isEditingProg ? (
+                          <form onSubmit={handleSaveProgram} className="space-y-4">
+                            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
+                              <button
+                                type="button"
+                                onClick={() => setIsEditingProg(false)}
+                                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
+                              >
+                                <ArrowLeft className="w-4 h-4" />
+                                Voltar para Lista
+                              </button>
+                              <span className="text-[10px] font-black uppercase tracking-widest text-sky-600 bg-sky-100/40 dark:bg-sky-950/60 px-2.5 py-1 rounded-md">
+                                {editProgData.id ? "Editando Programa" : "Novo Programa"}
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Título do Programa *</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={editProgData.title}
+                                  onChange={(e) => setEditProgData({ ...editProgData, title: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Tagline Curta / Slogan *</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={editProgData.tagline}
+                                  onChange={(e) => setEditProgData({ ...editProgData, tagline: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none"
+                                  placeholder="Ex: Janeiro Branco, SIPAT Integrada"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Público-Alvo</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={editProgData.target}
+                                  onChange={(e) => setEditProgData({ ...editProgData, target: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Período de Execução</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={editProgData.period}
+                                  onChange={(e) => setEditProgData({ ...editProgData, period: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none"
+                                />
+                              </div>
+
+                              <div className="md:col-span-2">
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Descrição Detalhada *</label>
+                                <textarea
+                                  required
+                                  rows={4}
+                                  value={editProgData.description}
+                                  onChange={(e) => setEditProgData({ ...editProgData, description: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Classe de Cores do Gradiente (Classes Tailwind CSS)</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={editProgData.color}
+                                  onChange={(e) => setEditProgData({ ...editProgData, color: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none"
+                                  placeholder="from-sky-500 to-indigo-600"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setIsEditingProg(false)}
+                                className="px-4 py-2 text-xs font-semibold bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-700 dark:text-white transition-colors cursor-pointer"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                type="submit"
+                                disabled={isSavingProg}
+                                className="px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
+                              >
+                                {isSavingProg ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                                Salvar Programa
+                              </button>
+                            </div>
+                          </form>
+                        ) : (
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <Calendar className="w-4 h-4 text-sky-500" />
+                                Programas e Calendários de SIPAT ({programs.length})
+                              </h4>
+                              <button
+                                type="button"
+                                onClick={handleCreateProgClick}
+                                className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-all hover:scale-105"
+                              >
+                                <Plus className="w-4 h-4" />
+                                Novo Programa
+                              </button>
+                            </div>
+
+                            <div className="border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden bg-slate-50/50 dark:bg-slate-950/20 max-h-[45vh] overflow-y-auto">
+                              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                                {programs.map((prog) => (
+                                  <div key={prog.id} className="p-4 flex items-center justify-between hover:bg-slate-100/40 dark:hover:bg-slate-900/40 transition-colors gap-4">
+                                    <div className="text-left">
+                                      <h5 className="font-bold text-xs text-slate-900 dark:text-white">{prog.title}</h5>
+                                      <span className="text-[9px] font-mono font-semibold text-slate-400">{prog.tagline}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleEditProgClick(prog)}
+                                        className="p-1.5 rounded-lg text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/40 cursor-pointer"
+                                      >
+                                        <Edit2 className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteProg(prog.id)}
+                                        className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {activeTab === "testimonials" && (
+                      /* TAB 4: TESTIMONIALS CRUD */
+                      <div className="text-left space-y-4">
+                        {isEditingTest ? (
+                          <form onSubmit={handleSaveTestimonial} className="space-y-4">
+                            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
+                              <button
+                                type="button"
+                                onClick={() => setIsEditingTest(false)}
+                                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
+                              >
+                                <ArrowLeft className="w-4 h-4" />
+                                Voltar para Lista
+                              </button>
+                              <span className="text-[10px] font-black uppercase tracking-widest text-sky-600 bg-sky-100/40 dark:bg-sky-950/60 px-2.5 py-1 rounded-md">
+                                {editTestData.id ? "Editando Depoimento" : "Novo Depoimento"}
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Nome do Gestor/Colaborador *</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={editTestData.name}
+                                  onChange={(e) => setEditTestData({ ...editTestData, name: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Cargo *</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={editTestData.role}
+                                  onChange={(e) => setEditTestData({ ...editTestData, role: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none"
+                                  placeholder="Coordenadora de EHS, Gerente de RH"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Empresa Contratante *</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={editTestData.company}
+                                  onChange={(e) => setEditTestData({ ...editTestData, company: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Nota (Estrelas 1-5)</label>
+                                <select
+                                  value={editTestData.rating}
+                                  onChange={(e) => setEditTestData({ ...editTestData, rating: Number(e.target.value) })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white text-xs"
+                                >
+                                  <option value={5}>5 Estrelas (Recomendado)</option>
+                                  <option value={4}>4 Estrelas</option>
+                                  <option value={3}>3 Estrelas</option>
+                                </select>
+                              </div>
+
+                              <div className="md:col-span-2">
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Texto do Depoimento *</label>
+                                <textarea
+                                  required
+                                  rows={4}
+                                  value={editTestData.text}
+                                  onChange={(e) => setEditTestData({ ...editTestData, text: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setIsEditingTest(false)}
+                                className="px-4 py-2 text-xs font-semibold bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-700 dark:text-white transition-colors cursor-pointer"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                type="submit"
+                                disabled={isSavingTest}
+                                className="px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
+                              >
+                                {isSavingTest ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                                Salvar Depoimento
+                              </button>
+                            </div>
+                          </form>
+                        ) : (
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <Star className="w-4 h-4 text-sky-500" />
+                                Depoimentos Cadastrados para o Slider ({testimonials.length})
+                              </h4>
+                              <button
+                                type="button"
+                                onClick={handleCreateTestClick}
+                                className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-all hover:scale-105"
+                              >
+                                <Plus className="w-4 h-4" />
+                                Novo Depoimento
+                              </button>
+                            </div>
+
+                            <div className="border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden bg-slate-50/50 dark:bg-slate-950/20 max-h-[45vh] overflow-y-auto">
+                              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                                {testimonials.map((test) => (
+                                  <div key={test.id} className="p-4 flex items-center justify-between hover:bg-slate-100/40 dark:hover:bg-slate-900/40 transition-colors gap-4">
+                                    <div className="text-left">
+                                      <h5 className="font-bold text-xs text-slate-900 dark:text-white">{test.name}</h5>
+                                      <span className="text-[9px] font-mono font-semibold text-slate-400">{test.role} • <span className="text-sky-500">{test.company}</span></span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleEditTestClick(test)}
+                                        className="p-1.5 rounded-lg text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/40 cursor-pointer"
+                                      >
+                                        <Edit2 className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteTest(test.id)}
+                                        className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {activeTab === "reviews" && (
+                      /* TAB 5: REVIEWS CRUD */
+                      <div className="text-left space-y-4">
+                        {isEditingRev ? (
+                          <form onSubmit={handleSaveReview} className="space-y-4">
+                            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
+                              <button
+                                type="button"
+                                onClick={() => setIsEditingRev(false)}
+                                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
+                              >
+                                <ArrowLeft className="w-4 h-4" />
+                                Voltar para Lista
+                              </button>
+                              <span className="text-[10px] font-black uppercase tracking-widest text-sky-600 bg-sky-100/40 dark:bg-sky-950/60 px-2.5 py-1 rounded-md">
+                                {editRevData.id ? "Editando Avaliação" : "Nova Avaliação"}
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Nome do Cliente Google *</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={editRevData.name}
+                                  onChange={(e) => setEditRevData({ ...editRevData, name: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Cargo *</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={editRevData.role}
+                                  onChange={(e) => setEditRevData({ ...editRevData, role: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Empresa *</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={editRevData.company}
+                                  onChange={(e) => setEditRevData({ ...editRevData, company: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Data Relativa</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={editRevData.date}
+                                  onChange={(e) => setEditRevData({ ...editRevData, date: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none"
+                                  placeholder="Há 1 semana, Há 1 mês"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Fundo do Avatar (Classe CSS)</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={editRevData.avatarBg}
+                                  onChange={(e) => setEditRevData({ ...editRevData, avatarBg: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none"
+                                  placeholder="bg-sky-600, bg-emerald-600, bg-purple-600"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Nota (Google Stars 1-5)</label>
+                                <select
+                                  value={editRevData.rating}
+                                  onChange={(e) => setEditRevData({ ...editRevData, rating: Number(e.target.value) })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white text-xs"
+                                >
+                                  <option value={5}>5 Estrelas</option>
+                                  <option value={4}>4 Estrelas</option>
+                                </select>
+                              </div>
+
+                              <div className="md:col-span-2">
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Texto da Avaliação *</label>
+                                <textarea
+                                  required
+                                  rows={4}
+                                  value={editRevData.text}
+                                  onChange={(e) => setEditRevData({ ...editRevData, text: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setIsEditingRev(false)}
+                                className="px-4 py-2 text-xs font-semibold bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-700 dark:text-white transition-colors cursor-pointer"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                type="submit"
+                                disabled={isSavingRev}
+                                className="px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
+                              >
+                                {isSavingRev ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                                Salvar Avaliação
+                              </button>
+                            </div>
+                          </form>
+                        ) : (
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <ThumbsUp className="w-4 h-4 text-sky-500" />
+                                Avaliações Google Auditadas ({reviews.length})
+                              </h4>
+                              <button
+                                type="button"
+                                onClick={handleCreateRevClick}
+                                className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-all hover:scale-105"
+                              >
+                                <Plus className="w-4 h-4" />
+                                Nova Avaliação
+                              </button>
+                            </div>
+
+                            <div className="border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden bg-slate-50/50 dark:bg-slate-950/20 max-h-[45vh] overflow-y-auto">
+                              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                                {reviews.map((rev) => (
+                                  <div key={rev.id} className="p-4 flex items-center justify-between hover:bg-slate-100/40 dark:hover:bg-slate-900/40 transition-colors gap-4">
+                                    <div className="text-left">
+                                      <h5 className="font-bold text-xs text-slate-900 dark:text-white">{rev.name}</h5>
+                                      <span className="text-[9px] font-mono font-semibold text-slate-400">{rev.company} • <span className="text-sky-500">{rev.date}</span></span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleEditRevClick(rev)}
+                                        className="p-1.5 rounded-lg text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/40 cursor-pointer"
+                                      >
+                                        <Edit2 className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteRev(rev.id)}
+                                        className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {activeTab === "blog" && (
+                      /* TAB 6: BLOG MANAGEMENT */
                       <div className="text-left space-y-4">
                         {isEditingPost ? (
                           /* BLOG SUB-VIEW: CREATING/EDITING FORM */
@@ -557,7 +1700,7 @@ export default function AdminPanel({ isOpen, onClose, settings }: AdminPanelProp
                             </div>
 
                             {/* Form submit footer */}
-                            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
+                            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 shrink-0">
                               <button
                                 type="button"
                                 onClick={() => setIsEditingPost(false)}
@@ -660,7 +1803,7 @@ export default function AdminPanel({ isOpen, onClose, settings }: AdminPanelProp
                             </div>
 
                             {/* Bottom Close/Logout bar */}
-                            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center mt-6">
+                            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center mt-6 shrink-0">
                               <button
                                 type="button"
                                 onClick={handleLogout}

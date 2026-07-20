@@ -33,3 +33,14 @@ export interface GalleryItem {
   caption: string;
   category: string;
 }
+
+export interface Review {
+  id: string;
+  name: string;
+  role: string;
+  company: string;
+  rating: number;
+  text: string;
+  date: string;
+  avatarBg: string;
+}
